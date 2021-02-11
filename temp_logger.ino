@@ -95,14 +95,13 @@ void drawG(){
 void setup() {
 
     M5.begin();
-    M5.RTC.begin();
-    SD.begin();       // for SD card file read/write
-
-    M5.EPD.SetRotation(90);
-//    M5.EPD.Clear(true);
     Wire.begin();
     readEEPROM();
-     
+    M5.RTC.begin();
+    SD.begin();       // for SD card file read/write
+    M5.EPD.SetRotation(90);
+    M5.EPD.Clear(true);  // reduce whitout time, afrer EEPROM read
+
       canvas.createCanvas(540, 960);
 //      canvas.loadFont("/fonts/MonospaceTypewriter.ttf", SD); // Load font files from SD Card
       canvas.loadFont("/fonts/ipaexg.ttf", SD); // Load font files from SD Card
