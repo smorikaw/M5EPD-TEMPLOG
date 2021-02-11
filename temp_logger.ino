@@ -62,7 +62,7 @@ void writeEEPROM(){
 }
 void drawG(){
   int i;
-  int humY, temY, temH, plotX;
+  int humY, temY, temH, plotX, humY1, plotX1;
   const int offsetY = 120;
   const int grH = 400;
 
@@ -76,17 +76,21 @@ void drawG(){
   temH = (int)((float)Otem[i]*(grH/255.0));
   temY = grH - temH;
   
-    canvas.fillRect(plotX, temY + offsetY,  6,temH, 10);
+    canvas.fillRect(plotX, temY + offsetY,  8,temH, 5);  // color is gray, width is 540/72 = 7.5  pixel
 
   }
-  for(i=0 ; i < PLOT_MAX ; i++){
+  for(i=1 ; i < PLOT_MAX ; i++){
      plotX = (int)((520.0 / (float)PLOT_MAX)*(float)i);
+     plotX1 = (int)((520.0 / (float)PLOT_MAX)*(float)(i-1));
      Ohum[i] = Ohum[i+1];
      humY = (int)(grH - (float)Ohum[i]*(grH/255.0));
-
-     canvas.fillCircle(plotX +10, humY + offsetY, 8, 15);
+     humY1 = (int)(grH - (float)Ohum[i-1]*(grH/255.0));
+     canvas.drawLine(plotX1, humY1 + offsetY, plotX, humY + offsetY, 4, 15);
+//     canvas.fillCircle(plotX, humY + offsetY, 6, 10);  // color is black
   }
-  
+        canvas.setTextSize(SMALL_FONT_SIZE);
+        canvas.setTextColor(15);
+        canvas.drawString("gray=temp 0-40C / line=hum 0-90%" , 10, offsetY+grH - 30);
 }
 //===========================
 // main disp time ant temp and log
@@ -99,12 +103,15 @@ void setup() {
     readEEPROM();
     M5.RTC.begin();
     SD.begin();       // for SD card file read/write
-    M5.EPD.SetRotation(90);
-    M5.EPD.Clear(true);  // reduce whitout time, afrer EEPROM read
 
+    M5.EPD.SetRotation(90);
+    M5.EPD.Clear(true);  // reduce whitout time
+
+     
       canvas.createCanvas(540, 960);
 //      canvas.loadFont("/fonts/MonospaceTypewriter.ttf", SD); // Load font files from SD Card
       canvas.loadFont("/fonts/ipaexg.ttf", SD); // Load font files from SD Card
+      canvas.createRender(SMALL_FONT_SIZE);
       canvas.createRender(MIDIUM_FONT_SIZE);
       canvas.createRender(LARGE_FONT_SIZE);
 
@@ -152,7 +159,6 @@ drawG();
                         M5.getBatteryVoltage(),
                         tem, hum
                         );
-
   file.println(buf);
   file.close();
 
