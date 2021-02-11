@@ -23,19 +23,19 @@ M5EPD_Canvas canvas(&M5.EPD);
 void readEEPROM(){
   int i;
   for(i=0; i < PLOT_MAX;i++){
-    Wire1.beginTransmission(0x50);
+    Wire.beginTransmission(0x50);
     Wire.write(i*2);             // read address
     Wire.endTransmission();
     Wire.requestFrom(0x50, 1);
-    delay(5);
+    delay(10);
       if(Wire.available()){
     Otem[i] = Wire.read();
   }
-      Wire1.beginTransmission(0x50);
+    Wire.beginTransmission(0x50);
     Wire.write(i*2+1);
     Wire.endTransmission();
     Wire.requestFrom(0x50, 1);
-    delay(5);
+    delay(10);
       if(Wire.available()){
     Ohum[i] = Wire.read();
   }
@@ -45,14 +45,14 @@ void readEEPROM(){
 void writeEEPROM(){
   int i;
   for(i=0; i < PLOT_MAX;i++){
-    Wire1.beginTransmission(0x50);
+    Wire.beginTransmission(0x50);
     Wire.write(i*2);              // write address
     Wire.write(Otem[i]);          // write data
     Wire.endTransmission();
     Wire.requestFrom(0x50, 1);
     delay(5);
 
-    Wire1.beginTransmission(0x50);
+    Wire.beginTransmission(0x50);
     Wire.write(i*2+1);
     Wire.write(Ohum[i]);
     Wire.endTransmission();
@@ -72,7 +72,6 @@ void drawG(){
  for(i=0 ; i < PLOT_MAX ; i++){
   plotX = (int)((520.0 / (float)PLOT_MAX)*(float)i);
   Otem[i] = Otem[i+1];
-  Ohum[i] = Ohum[i+1];
 
   temH = (int)((float)Otem[i]*(grH/255.0));
   temY = grH - temH;
@@ -82,7 +81,9 @@ void drawG(){
   }
   for(i=0 ; i < PLOT_MAX ; i++){
      plotX = (int)((520.0 / (float)PLOT_MAX)*(float)i);
+     Ohum[i] = Ohum[i+1];
      humY = (int)(grH - (float)Ohum[i]*(grH/255.0));
+
      canvas.fillCircle(plotX +10, humY + offsetY, 8, 15);
   }
   
@@ -98,7 +99,7 @@ void setup() {
     SD.begin();       // for SD card file read/write
 
     M5.EPD.SetRotation(90);
-    M5.EPD.Clear(true);
+//    M5.EPD.Clear(true);
     Wire.begin();
     readEEPROM();
      
@@ -147,10 +148,10 @@ drawG();
         writeEEPROM();
        
   file =SD.open("/temp_log.txt", FILE_APPEND);  // not FILE_WRITE
-  sprintf(buf,"%04d/%02d/%02d,%02d:%02d:%02d,%04d,%5.2f\n",RTCDate.year,RTCDate.mon,RTCDate.day,
+  sprintf(buf,"%04d/%02d/%02d,%02d:%02d:%02d,%04d,%6.2f,%6.2f",RTCDate.year,RTCDate.mon,RTCDate.day,
                         RTCtime.hour,RTCtime.min,RTCtime.sec,
                         M5.getBatteryVoltage(),
-                        tem
+                        tem, hum
                         );
 
   file.println(buf);
