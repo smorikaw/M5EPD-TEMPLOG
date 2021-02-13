@@ -7,6 +7,9 @@
 #define MIDIUM_FONT_SIZE 32
 #define LARGE_FONT_SIZE 180
 #define PLOT_MAX 72
+#define PLOT_TEMP_MAX 40
+#define W_MAX 540
+#define H_MAX 960
 
 char temStr[10];
 float tem;
@@ -67,29 +70,44 @@ void drawG(){
   const int grH = 400;
 
   // tem is 0 to 40 / hum is 10 to 80 / 400 pixel
-  Otem[PLOT_MAX] = (int)(tem*255.0/30.0);   // temp 0-40(0-255)
+  Otem[PLOT_MAX] = (int)(tem*255.0/40.0);   // temp 0-40(0-255)
   Ohum[PLOT_MAX] = (int)(hum*255.0/90.0);
  for(i=0 ; i < PLOT_MAX ; i++){
-  plotX = (int)((520.0 / (float)PLOT_MAX)*(float)i);
   Otem[i] = Otem[i+1];
-
+  Ohum[i] = Ohum[i+1];
+  
+  plotX = (int)((520.0 / (float)PLOT_MAX)*(float)i);
   temH = (int)((float)Otem[i]*(grH/255.0));
   temY = grH - temH;
-  
     canvas.fillRect(plotX, temY + offsetY,  8,temH, 5);  // color is gray, width is 540/72 = 7.5  pixel
 
   }
   for(i=1 ; i < PLOT_MAX ; i++){
      plotX = (int)((520.0 / (float)PLOT_MAX)*(float)i);
      plotX1 = (int)((520.0 / (float)PLOT_MAX)*(float)(i-1));
-     Ohum[i] = Ohum[i+1];
+
      humY = (int)(grH - (float)Ohum[i]*(grH/255.0));
      humY1 = (int)(grH - (float)Ohum[i-1]*(grH/255.0));
      canvas.drawLine(plotX1, humY1 + offsetY, plotX, humY + offsetY, 4, 15);
 //     canvas.fillCircle(plotX, humY + offsetY, 6, 10);  // color is black
   }
+        
         canvas.setTextSize(SMALL_FONT_SIZE);
         canvas.setTextColor(15);
+        canvas.drawFastHLine(0, offsetY, W_MAX, 15);
+
+        temY = grH - (int)((float)(int)(30.0*255.0/40.0)*(grH/255.0));
+        canvas.drawFastHLine(50, temY + offsetY, W_MAX-50, 15);
+        canvas.drawString("30C" , 5, temY + offsetY -10);
+        
+        temY = grH - (int)((float)(int)(20.0*255.0/40.0)*(grH/255.0));
+        canvas.drawFastHLine(50, temY + offsetY, W_MAX-50, 15);
+        canvas.drawString("20C" , 5, temY + offsetY -10);
+        
+        temY = grH - (int)((float)(int)(10.0*255.0/40.0)*(grH/255.0));
+        canvas.drawFastHLine(50, temY + offsetY, W_MAX-50, 15);
+        canvas.drawString("10C" , 5, temY + offsetY -10);
+
         canvas.drawString("gray=temp 0-40C / line=hum 0-90%" , 10, offsetY+grH - 30);
 }
 //===========================
@@ -108,7 +126,7 @@ void setup() {
     M5.EPD.Clear(true);  // reduce whitout time
 
      
-      canvas.createCanvas(540, 960);
+      canvas.createCanvas(W_MAX, H_MAX);
 //      canvas.loadFont("/fonts/MonospaceTypewriter.ttf", SD); // Load font files from SD Card
       canvas.loadFont("/fonts/ipaexg.ttf", SD); // Load font files from SD Card
       canvas.createRender(SMALL_FONT_SIZE);
@@ -119,11 +137,13 @@ void setup() {
 
 void loop() {
   char  buf[128];
-  int locY=1;
+  int locY=0;
+  int nextmin, sleepsec;
       
       canvas.fillCanvas(0);
       canvas.setTextSize(MIDIUM_FONT_SIZE);
       canvas.setTextColor(15);
+      canvas.drawString("Temperature and Humidity monitor" , 0, locY++ * pitch);
       M5.RTC.getTime(&RTCtime);
       M5.RTC.getDate(&RTCDate);
       sprintf(buf,"Date %04d/%02d/%02d %02d:%02d:%02d",
@@ -131,11 +151,13 @@ void loop() {
                         RTCtime.hour,RTCtime.min,RTCtime.sec);
       canvas.drawString(String(buf) , 10, locY++ * pitch);
       sprintf(buf,"BatteryVoltage %06d",M5.getBatteryVoltage());
+      canvas.setTextSize(SMALL_FONT_SIZE);
       canvas.drawString(String(buf) , 10, locY++ * pitch);
+      canvas.setTextSize(MIDIUM_FONT_SIZE);
       canvas.drawString("Temperature", 10, 540);
       canvas.drawString("Humidity", 10, 740);
-      canvas.drawFastHLine(0, 580, 540, 15);
-      canvas.drawFastHLine(0, 780, 540, 15);
+      canvas.drawFastHLine(0, 580, W_MAX, 15);
+      canvas.drawFastHLine(0, 780, W_MAX, 15);
  
       M5.SHT30.UpdateData();
       tem = M5.SHT30.GetTemperature();
@@ -148,23 +170,34 @@ void loop() {
       canvas.drawString(String(humStr), 10, 780);
 
 drawG();
-
-//       canvas.pushCanvas(0,0,UPDATE_MODE_DU);
-       canvas.pushCanvas(0,0,UPDATE_MODE_GLR16);
-        writeEEPROM();
+// for debug
+    nextmin = (int)(((int)(RTCtime.min / 10) +1) *10);
+    sleepsec =(nextmin - RTCtime.min) * 60   - RTCtime.sec;
+    canvas.setTextSize(SMALL_FONT_SIZE);
+    canvas.setTextColor(0,15);
+    sprintf(buf,"nextmin=%02d/sleepsec=%3d",nextmin,sleepsec);
+    canvas.drawString(String(buf)  , 10, H_MAX - SMALL_FONT_SIZE);  // bottom line
+        
+       canvas.pushCanvas(0,0,UPDATE_MODE_GLR16); // slow high contrast mode
+       writeEEPROM();
        
   file =SD.open("/temp_log.txt", FILE_APPEND);  // not FILE_WRITE
-  sprintf(buf,"%04d/%02d/%02d,%02d:%02d:%02d,%04d,%6.2f,%6.2f",RTCDate.year,RTCDate.mon,RTCDate.day,
+  sprintf(buf,"%04d/%02d/%02d,%02d:%02d:%02d,%04d,%6.2f,%6.2f,%3d",RTCDate.year,RTCDate.mon,RTCDate.day,
                         RTCtime.hour,RTCtime.min,RTCtime.sec,
                         M5.getBatteryVoltage(),
-                        tem, hum
+                        tem, hum,
+                        sleepsec
                         );
   file.println(buf);
   file.close();
 
       // shutdown until RTC + 10min
     delay(1000); // need delay for EPD driver ??
-    M5.shutdown(600);  // 10 min interval at battery operation
+    M5.RTC.getTime(&RTCtime);
+    nextmin = (int)(((int)(RTCtime.min / 10) +1) *10);
+    sleepsec =(nextmin - RTCtime.min) * 60   - RTCtime.sec;
+//    M5.shutdown(sleepsec - 6);  // 10 min interval at battery operation
+    M5.shutdown(600);
     sleep(60); // 1 min interval at power connected
 
 //  int nextmin;
