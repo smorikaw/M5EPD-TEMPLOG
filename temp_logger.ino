@@ -69,8 +69,14 @@ void drawG(){
   const int offsetY = 120;
   const int grH = 400;
 
+
   // tem is 0 to 40 / hum is 10 to 80 / 400 pixel
-  Otem[PLOT_MAX] = (int)(tem*255.0/40.0);   // temp 0-40(0-255)
+
+  if(tem <0 ){
+    Otem[PLOT_MAX] = 0;    // temp low limitter
+  }else{
+    Otem[PLOT_MAX] = (int)(tem*255.0/40.0);   // temp 0-40(0-255)
+  }
   Ohum[PLOT_MAX] = (int)(hum*255.0/90.0);
  for(i=0 ; i < PLOT_MAX ; i++){
   Otem[i] = Otem[i+1];
@@ -196,9 +202,10 @@ drawG();
     M5.RTC.getTime(&RTCtime);
     nextmin = (int)(((int)(RTCtime.min / 10) +1) *10);
     sleepsec =(nextmin - RTCtime.min) * 60   - RTCtime.sec;
-//    M5.shutdown(sleepsec - 6);  // 10 min interval at battery operation
-    M5.shutdown(600);
-    sleep(60); // 1 min interval at power connected
+//    sleepsec = 600;
+    M5.shutdown(sleepsec-5);  // 10 min interval at battery operation
+
+    sleep(56); // 1 min interval at power connected
 
 //  int nextmin;
 //  nextmin = ((RTCtime.min/10)+1)*10;
